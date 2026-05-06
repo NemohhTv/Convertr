@@ -101,14 +101,7 @@ dist\Convertr.exe
 
 ## Release process
 
-Create and push a version tag:
-
-```bash
-git tag v2.2.0
-git push origin v2.2.0
-```
-
-GitHub Actions will build the installer and publish it on the release as:
+GitHub Actions builds the installer and publishes it on the release as:
 
 ```text
 Convertr-Setup-v2.2.0.exe
