@@ -13,7 +13,8 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 APP_NAME = "Convertr"
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
+REPO_API = "https://api.github.com/repos/NemohhTv/Convertr/releases/latest"
 FFMPEG_ZIP_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_FORMATS = ["mp4", "mkv", "mov", "webm"]
 AUDIO_FORMATS = ["m4a", "aac", "mp3", "wav", "flac"]
@@ -21,13 +22,8 @@ MEDIA_EXTS = {
     ".mp4", ".mkv", ".mov", ".webm", ".avi", ".flv", ".m4v", ".wmv",
     ".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".opus", ".wma"
 }
-BG = "#0b1118"
-CARD = "#121a24"
-PANEL = "#0f1620"
-TEXT = "#f4f7fb"
-MUTED = "#93a2b8"
-ACCENT = "#3ddc84"
-BORDER = "#1e2937"
+BG, CARD, PANEL = "#0b1118", "#121a24", "#0f1620"
+TEXT, MUTED, ACCENT, BORDER = "#f4f7fb", "#93a2b8", "#3ddc84", "#1e2937"
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -59,6 +55,27 @@ def run_hidden(cmd, **kwargs):
     return subprocess.run(cmd, creationflags=flags, startupinfo=startupinfo, **kwargs)
 
 
+def popen_hidden(cmd, **kwargs):
+    flags = 0
+    startupinfo = None
+    if os.name == "nt":
+        flags = subprocess.CREATE_NO_WINDOW
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return subprocess.Popen(cmd, creationflags=flags, startupinfo=startupinfo, **kwargs)
+
+
+def version_tuple(v: str):
+    v = (v or "").strip().lower().lstrip("v")
+    parts = []
+    for piece in v.split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append(int(digits or 0))
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+
 def aspect(w, h):
     if not w or not h:
         return "Unknown"
@@ -74,6 +91,16 @@ def rate(v):
         return v or "?"
 
 
+def fmt_time(seconds):
+    if seconds is None:
+        return "Unknown"
+    seconds = int(seconds)
+    h = seconds // 3600
+    m = seconds % 3600 // 60
+    s = seconds % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
 def probe(path: Path):
     _, ffprobe = refresh_tools()
     if not ffprobe:
@@ -86,11 +113,10 @@ def probe(path: Path):
     streams = data.get("streams", [])
     video = next((s for s in streams if s.get("codec_type") == "video"), None)
     audio = next((s for s in streams if s.get("codec_type") == "audio"), None)
-    dur = None
     try:
         dur = float(data.get("format", {}).get("duration"))
     except Exception:
-        pass
+        dur = None
     return {
         "video_codec": video.get("codec_name") if video else "",
         "audio_codec": audio.get("codec_name") if audio else "",
@@ -104,36 +130,28 @@ def probe(path: Path):
     }
 
 
-def fmt_time(seconds):
-    if seconds is None:
-        return "Unknown"
-    seconds = int(seconds)
-    h = seconds // 3600
-    m = seconds % 3600 // 60
-    s = seconds % 60
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
-
-
 class Settings(ctk.CTkToplevel):
     def __init__(self, master):
         super().__init__(master)
         self.master_app = master
         self.title("Convertr Settings")
-        self.geometry("560x340")
+        self.geometry("620x430")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
         box = ctk.CTkFrame(self, fg_color=CARD, corner_radius=18, border_width=1, border_color=BORDER)
         box.pack(fill="both", expand=True, padx=18, pady=18)
         ctk.CTkLabel(box, text="Settings", font=ctk.CTkFont(size=26, weight="bold"), text_color=TEXT).pack(anchor="w", padx=20, pady=(18, 4))
-        ctk.CTkLabel(box, text="Install FFmpeg locally into Convertr's bin folder. No system PATH changes needed.", text_color=MUTED, wraplength=470, justify="left").pack(anchor="w", padx=20)
-        self.logbox = ctk.CTkTextbox(box, height=135, fg_color=PANEL, border_width=1, border_color=BORDER)
+        ctk.CTkLabel(box, text=f"Convertr {APP_VERSION} • Install FFmpeg or update the app from the latest GitHub release.", text_color=MUTED, wraplength=540, justify="left").pack(anchor="w", padx=20)
+        self.logbox = ctk.CTkTextbox(box, height=190, fg_color=PANEL, border_width=1, border_color=BORDER)
         self.logbox.pack(fill="x", padx=20, pady=18)
-        self.log("Ready to install or update FFmpeg.")
+        self.log("Ready.")
         row = ctk.CTkFrame(box, fg_color="transparent")
         row.pack(fill="x", padx=20)
-        self.btn = ctk.CTkButton(row, text="Install / Update FFmpeg", fg_color=ACCENT, hover_color="#35c676", text_color="#06120a", height=40, command=self.install)
-        self.btn.pack(side="left")
+        self.ffmpeg_btn = ctk.CTkButton(row, text="Install / Update FFmpeg", fg_color=ACCENT, hover_color="#35c676", text_color="#06120a", height=40, command=self.install_ffmpeg)
+        self.ffmpeg_btn.pack(side="left")
+        self.update_btn = ctk.CTkButton(row, text="Check / Install App Update", fg_color="#1f2a38", hover_color="#273446", height=40, command=self.install_app_update)
+        self.update_btn.pack(side="left", padx=10)
         ctk.CTkButton(row, text="Close", fg_color="#1f2a38", hover_color="#273446", height=40, command=self.destroy).pack(side="right")
 
     def log(self, msg):
@@ -141,11 +159,11 @@ class Settings(ctk.CTkToplevel):
         self.logbox.see("end")
         self.update_idletasks()
 
-    def install(self):
-        self.btn.configure(state="disabled")
-        threading.Thread(target=self._install, daemon=True).start()
+    def install_ffmpeg(self):
+        self.ffmpeg_btn.configure(state="disabled")
+        threading.Thread(target=self._install_ffmpeg, daemon=True).start()
 
-    def _install(self):
+    def _install_ffmpeg(self):
         try:
             base = app_dir()
             tmp = base / "_ffmpeg_tmp"
@@ -171,7 +189,65 @@ class Settings(ctk.CTkToplevel):
             self.log(f"Install failed: {e}")
             messagebox.showerror(APP_NAME, str(e))
         finally:
-            self.btn.configure(state="normal")
+            self.ffmpeg_btn.configure(state="normal")
+
+    def install_app_update(self):
+        self.update_btn.configure(state="disabled")
+        threading.Thread(target=self._install_app_update, daemon=True).start()
+
+    def _install_app_update(self):
+        try:
+            self.log("Checking GitHub for the latest release...")
+            req = urllib.request.Request(REPO_API, headers={"User-Agent": "Convertr-Updater"})
+            with urllib.request.urlopen(req, timeout=30) as response:
+                release = json.loads(response.read().decode("utf-8"))
+            latest_tag = release.get("tag_name", "")
+            latest_name = latest_tag.lstrip("v")
+            if version_tuple(latest_name) <= version_tuple(APP_VERSION):
+                self.log(f"You are already on the latest version: {APP_VERSION}")
+                messagebox.showinfo(APP_NAME, f"Convertr is already up to date.\n\nCurrent version: {APP_VERSION}")
+                return
+            asset = None
+            for candidate in release.get("assets", []):
+                if candidate.get("name", "").lower() == "convertr.exe":
+                    asset = candidate
+                    break
+            if not asset:
+                raise RuntimeError("Latest release does not include Convertr.exe yet. Create a tagged release first.")
+            download_url = asset.get("browser_download_url")
+            self.log(f"Latest version found: {latest_tag}")
+            if not getattr(sys, "frozen", False):
+                self.log("Source mode detected. The updater only replaces the packaged EXE.")
+                messagebox.showinfo(APP_NAME, "Update found, but you are running from source. Build or download the latest EXE from GitHub Releases.")
+                return
+            current_exe = Path(sys.executable).resolve()
+            new_exe = current_exe.with_name("Convertr.new.exe")
+            self.log("Downloading new Convertr.exe...")
+            urllib.request.urlretrieve(download_url, new_exe)
+            self.log("Download complete. Preparing restart...")
+            updater = current_exe.with_name("Convertr_Update.bat")
+            updater.write_text(
+                "@echo off\n"
+                "timeout /t 2 /nobreak >nul\n"
+                f"copy /Y \"{new_exe}\" \"{current_exe}\"\n"
+                f"del \"{new_exe}\"\n"
+                f"start \"\" \"{current_exe}\"\n"
+                "del \"%~f0\"\n",
+                encoding="utf-8",
+            )
+            self.log("Convertr will close, update, and reopen.")
+            messagebox.showinfo(APP_NAME, "Convertr will close, update, and reopen automatically.")
+            popen_hidden(["cmd", "/c", str(updater)])
+            self.master_app.destroy()
+            sys.exit(0)
+        except Exception as e:
+            self.log(f"Update failed: {e}")
+            messagebox.showerror(APP_NAME, f"Update failed.\n\n{e}")
+        finally:
+            try:
+                self.update_btn.configure(state="normal")
+            except Exception:
+                pass
 
 
 class App(ctk.CTk):
@@ -200,7 +276,6 @@ class App(ctk.CTk):
         ctk.CTkLabel(root, text="Convertr", font=ctk.CTkFont(size=34, weight="bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(root, text="Fast file-type conversion that preserves source details whenever possible.", text_color=MUTED).grid(row=0, column=0, sticky="w", pady=(48, 0))
         ctk.CTkButton(root, text="Settings", command=lambda: Settings(self), fg_color="#1f2a38", hover_color="#273446", height=40).grid(row=0, column=1, sticky="e")
-
         left = ctk.CTkFrame(root, fg_color=CARD, corner_radius=18, border_width=1, border_color=BORDER)
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 14), pady=(24, 0))
         left.grid_columnconfigure(0, weight=1)
@@ -213,13 +288,11 @@ class App(ctk.CTk):
         ctk.CTkButton(row, text="Clear", command=self.clear, fg_color="#2a1e21", hover_color="#3a252a", height=40).pack(side="right")
         self.listbox = ctk.CTkScrollableFrame(left, fg_color=PANEL, corner_radius=14, border_width=1, border_color=BORDER)
         self.listbox.grid(row=2, column=0, sticky="nsew", padx=18, pady=(0, 18))
-
         right = ctk.CTkFrame(root, fg_color=CARD, corner_radius=18, border_width=1, border_color=BORDER)
         right.grid(row=1, column=1, sticky="nsew", pady=(24, 0))
         right.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(right, text="Output Settings", font=ctk.CTkFont(size=20, weight="bold"), text_color=TEXT).pack(anchor="w", padx=18, pady=(18, 10))
-        self.seg_type = ctk.CTkSegmentedButton(right, values=["Video", "Audio"], variable=self.output_type, command=self.change_type)
-        self.seg_type.pack(fill="x", padx=18, pady=(0, 14))
+        ctk.CTkSegmentedButton(right, values=["Video", "Audio"], variable=self.output_type, command=self.change_type).pack(fill="x", padx=18, pady=(0, 14))
         self.format_menu = ctk.CTkOptionMenu(right, values=VIDEO_FORMATS, variable=self.output_format, fg_color="#182230")
         self.format_menu.pack(fill="x", padx=18, pady=(0, 14))
         ctk.CTkLabel(right, text="Conversion Mode", text_color=MUTED, font=ctk.CTkFont(weight="bold")).pack(anchor="w", padx=18)
@@ -247,8 +320,7 @@ class App(ctk.CTk):
         self.output_format.set(values[0])
 
     def add_files(self):
-        paths = filedialog.askopenfilenames(title="Add media files")
-        self.add_paths([Path(p) for p in paths])
+        self.add_paths([Path(p) for p in filedialog.askopenfilenames(title="Add media files")])
 
     def add_folder(self):
         folder = filedialog.askdirectory(title="Add folder")
@@ -319,8 +391,7 @@ class App(ctk.CTk):
             self.after(0, lambda n=item["path"].name: self.set_status(f"Converting {n}..."))
             ok, msg = self.convert_one(item)
             item["status"] = "Done" if ok else "Failed"
-            if ok:
-                done += 1
+            done += 1 if ok else 0
             self.after(0, self.render)
             self.after(0, lambda v=i / total: self.progress.set(v))
             self.after(0, lambda m=msg: self.set_status(m))
@@ -341,7 +412,6 @@ class App(ctk.CTk):
         mp4_video_ok = video in {"h264", "hevc", "mpeg4"}
         mp4_audio_ok = audio in {"aac", "mp3", "alac"}
         cmd = [ffmpeg, "-y", "-i", str(item["path"]), "-map_metadata", "0"]
-
         if self.output_type.get() == "Audio":
             cmd += ["-vn"]
             if smart and ((ext in {"m4a", "aac"} and audio == "aac") or (ext == "mp3" and audio == "mp3") or (ext == "flac" and audio == "flac")):
