@@ -176,8 +176,12 @@ def _build_command(
 
     if mode == "smart_fast" and can_copy_video and can_copy_audio:
         # Pure remux. Copy all streams; just rewrap the container.
+        # Use 0:V (video) and 0:a (audio) specifiers instead of 0 so that
+        # non-AV streams (timecode tracks, data tracks with codec=none) are
+        # silently skipped rather than causing a "codec not supported in
+        # container" error.
         cmd = base + [
-            "-map", "0",
+            "-map", "0:V", "-map", "0:a",
             "-c", "copy",
             "-map_metadata", "0",
             str(output_path),
@@ -188,7 +192,7 @@ def _build_command(
         # Copy video, transcode audio only.
         audio_enc = DEFAULT_AUDIO_ENCODER_FOR_CONTAINER.get(target, "aac")
         cmd = base + [
-            "-map", "0",
+            "-map", "0:V", "-map", "0:a",
             "-c:v", "copy",
             "-c:a", audio_enc,
             "-map_metadata", "0",
@@ -200,7 +204,7 @@ def _build_command(
     # whenever the source video codec doesn't fit the target container.
     audio_enc = DEFAULT_AUDIO_ENCODER_FOR_CONTAINER.get(target, "aac")
     cmd = base + [
-        "-map", "0",
+        "-map", "0:V", "-map", "0:a",
         "-c:v", DEFAULT_VIDEO_ENCODER,
         "-preset", "medium",
         "-crf", "20",
