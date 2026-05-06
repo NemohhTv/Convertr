@@ -1,129 +1,128 @@
-<div align="center">
-
 # Convertr
 
-### Fast, clean file conversion for Windows
+**Fast, clean media conversion for Windows.**
 
-Convertr is a modern Windows desktop app for converting video and audio files while keeping the original source details intact whenever possible.
+A modern Windows desktop app for converting video and audio files. Built around a "Smart Fast Mode" that remuxes whenever possible — so swapping containers (MKV → MP4, MOV → MP4, etc.) finishes in seconds instead of minutes.
 
-[Download the latest release](https://github.com/NemohhTv/Convertr/releases/latest)
-
-</div>
+[**Download the latest release**](https://github.com/NemohhTv/Convertr/releases/latest)
 
 ---
 
-## Downloads
-
-The release page provides two Windows installers:
-
-| Installer | What it does |
-|---|---|
-| `Convertr-Setup-v2.2.1.exe` | Installs the Convertr desktop app |
-| `Convertr-FFmpeg-Setup-v2.2.1.exe` | Installs FFmpeg locally for Convertr |
-
-Install Convertr first. Then either install FFmpeg from inside the app through **Settings**, or download and run the standalone FFmpeg installer from the release page.
-
-## Why Convertr?
-
-Convertr is built for quick format changes without wrecking quality. When a file can be repackaged instead of re-encoded, Convertr uses **Smart Fast Mode** to remux the file, which is dramatically faster than a full conversion.
-
-For example, an MKV with compatible H.264 video and AAC audio can be changed to MP4 without re-encoding the video.
-
 ## Features
 
-- Sleek dark Windows desktop UI
-- Simple installer EXE from GitHub Releases
-- Separate FFmpeg installer EXE from GitHub Releases
-- No command prompt window when running the installed app
+- Sleek dark UI with proper High-DPI scaling (no blurry text on 125% / 150% displays)
+- **Smart Fast Mode** — remuxes when stream codecs are compatible with the target container, instead of re-encoding
+- **Maximum Compatibility Mode** — re-encodes to safe, broadly-supported codecs
+- Drag-and-drop files into the window
 - Batch convert multiple files at once
-- Built-in FFmpeg installer and updater
-- Built-in app updater from GitHub Releases
-- Smart Fast Mode for near-instant remuxing when possible
-- Maximum Compatibility Mode for safer conversions
-- Optional custom output folder
-- Preserves source resolution, aspect ratio, frame rate, and metadata where supported
+- One-click FFmpeg installer in Settings — no PATH setup, no admin rights required for FFmpeg itself
+- In-app updater that pulls new releases from GitHub
+- System tray support — minimize instead of closing
+- Conversion history with double-click to open
+- Toast notification when a batch finishes
 
-## Supported outputs
+## Supported formats
 
 | Type | Formats |
-|---|---|
+| ---- | ------- |
 | Video | MP4, MKV, MOV, WEBM |
 | Audio | M4A, AAC, MP3, WAV, FLAC |
 
-## Conversion modes
-
-### Smart Fast
-
-Default mode. Best for speed.
-
-Smart Fast tries to avoid re-encoding:
-
-- Copies compatible video streams
-- Copies compatible audio streams
-- Converts only the audio when video can stay untouched
-- Uses full conversion only when the source codec requires it
-
-### Maximum Compatibility
-
-Best when you need files that work broadly across players, editors, and devices. This mode uses safer encoding choices, but it can take longer.
-
 ## Installation
 
-1. Open the [latest release](https://github.com/NemohhTv/Convertr/releases/latest)
-2. Download `Convertr-Setup-v2.2.1.exe`
-3. Run the installer
-4. Open Convertr
-5. Install FFmpeg from **Settings**, or run `Convertr-FFmpeg-Setup-v2.2.1.exe`
+1. Download `Convertr-Setup-vX.Y.Z.exe` from the [latest release](https://github.com/NemohhTv/Convertr/releases/latest)
+2. Run the installer (admin prompt — installs to Program Files)
+3. Launch Convertr
+4. Open **Settings → Install FFmpeg**
 
-FFmpeg installs locally for Convertr. You do not need to set up system PATH.
+FFmpeg installs into `%LOCALAPPDATA%\Convertr\ffmpeg`, isolated from any system FFmpeg.
 
 ## Updating
 
-Inside Convertr:
+Convertr checks for updates silently when it launches. If a new release is available, a banner appears at the top of the window — click **Update** and the new installer downloads and runs automatically. The running app closes itself before files are replaced.
 
-1. Open **Settings**
-2. Click **Check / Install App Update**
-3. Convertr downloads the newest GitHub Release and starts the installer
+You can also manually check from **Settings → Check for updates**, or disable auto-checking entirely.
 
 ## Build from source
 
 Requirements:
 
-- Windows
+- Windows 10 or later
 - Python 3.11+
-- Inno Setup, only needed for installer builds
-
-Install dependencies:
+- [Inno Setup 6](https://jrsoftware.org/isinfo.php) (only needed if you want to build the installer)
 
 ```bat
+:: install dependencies
 install_python_requirements.bat
-```
 
-Build the app EXE:
+:: run from source
+run_convertr_source.bat
 
-```bat
+:: build the EXE (uses PyInstaller)
 build_windows_exe.bat
 ```
 
-The app EXE will be created in:
+Output: `dist\Convertr\Convertr.exe`
 
-```text
-dist\Convertr.exe
+## Releasing a new version
+
+The repo's GitHub Actions workflow builds the installer and publishes a Release automatically when you push a version tag:
+
+```bash
+git tag v3.0.1
+git push origin v3.0.1
 ```
 
-## Release process
+`.github/workflows/release.yml` will:
 
-GitHub Actions builds both installers and publishes them on the release page:
+1. Build `Convertr.exe` with PyInstaller on a `windows-latest` runner
+2. Package it with Inno Setup into `Convertr-Setup-v3.0.1.exe`
+3. Create a GitHub Release and attach the installer
 
-```text
-Convertr-Setup-v2.2.1.exe
-Convertr-FFmpeg-Setup-v2.2.1.exe
+The in-app updater reads from this Release endpoint, so users will see the new version on their next launch.
+
+## How "Smart Fast Mode" works
+
+When you convert a file, Convertr first runs `ffprobe` to read the source's stream codecs. It then checks each stream against a compatibility table for the target container:
+
+- If **all streams** can be copied (e.g. an MKV with H.264 video + AAC audio → MP4), Convertr uses `ffmpeg -c copy`. This is a remux — no re-encoding, near-instant for any file size.
+- If **only some streams** can be copied (e.g. MKV with H.264 video + Opus audio → MP4), Convertr copies the compatible streams and re-encodes only the rest.
+- If **nothing fits**, Convertr falls back to a full re-encode using H.264 + AAC.
+
+You'll see "Remuxed ✓" or "Converted ✓" in the status column so you know which path was taken.
+
+## Project layout
+
+```
+Convertr/
+├── app.py                          # entry point (used by source + PyInstaller)
+├── Convertr.spec                   # PyInstaller config
+├── requirements.txt                # runtime deps
+├── requirements-build.txt          # build deps (adds pyinstaller)
+├── installer/
+│   └── Convertr.iss                # Inno Setup installer script
+├── .github/workflows/
+│   ├── ci.yml                      # smoke build on every push
+│   └── release.yml                 # build + publish installer on tag
+└── src/convertr/
+    ├── __init__.py                 # version + repo constants
+    ├── app.py                      # QApplication entry
+    ├── core/
+    │   ├── paths.py                # filesystem helpers
+    │   ├── settings.py             # JSON settings + history
+    │   ├── ffmpeg_installer.py     # download/install portable FFmpeg
+    │   ├── converter.py            # ffmpeg invocation + smart-fast logic
+    │   └── updater.py              # GitHub Releases updater
+    ├── ui/
+    │   ├── theme.py                # QSS stylesheet
+    │   ├── workers.py              # QThread workers (no UI freezes)
+    │   └── main_window.py          # tabs, drag-drop, tray
+    └── resources/
+        ├── icon.ico                # Windows icon (multi-resolution)
+        ├── icon.png                # tray + window icon
+        └── logo.png                # header logo
 ```
 
 ---
 
-<div align="center">
-
 Made for fast, no-fuss media conversion.
-
-</div>

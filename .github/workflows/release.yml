@@ -1,0 +1,111 @@
+name: Release
+
+# Triggers when you push a tag like ``v3.0.0``. The workflow builds the
+# Windows EXE with PyInstaller, packages it with Inno Setup, and attaches
+# the installer to a GitHub Release. The in-app updater reads from this
+# Release endpoint, so all you need to do to ship an update is push a tag.
+#
+# The workflow is also exposed under workflow_dispatch so you can build a
+# release manually from the Actions tab without tagging.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 3.0.1) — used only for manual runs"
+        required: true
+        default: "3.0.0"
+
+permissions:
+  contents: write   # needed to create the Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version from tag
+        id: version
+        shell: bash
+        run: |
+          # On a tag push, GITHUB_REF looks like 'refs/tags/v3.0.1' — strip
+          # the prefix. On manual runs, use the input.
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            v="${GITHUB_REF#refs/tags/v}"
+            v="${v#v}"
+          else
+            v="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Building Convertr v$v"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-build.txt
+
+      - name: Sync version into source
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $path = "src/convertr/__init__.py"
+          (Get-Content $path) `
+            -replace '__version__\s*=\s*".*"', "__version__ = `"$v`"" `
+            | Set-Content $path
+          Write-Host "Patched __version__ to $v"
+          Get-Content $path
+
+      - name: Build app with PyInstaller
+        run: pyinstaller --noconfirm Convertr.spec
+
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/Convertr/Convertr.exe")) {
+            throw "Build failed — Convertr.exe not found"
+          }
+          $size = (Get-Item "dist/Convertr/Convertr.exe").Length / 1MB
+          Write-Host "Convertr.exe built ($([math]::Round($size,1)) MB)"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          }
+          & "$iscc" "/DAppVersion=${{ steps.version.outputs.version }}" installer/Convertr.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
+          Get-ChildItem release
+
+      - name: Upload installer as workflow artifact
+        # Always uploaded so you can download builds even from non-tag runs.
+        uses: actions/upload-artifact@v4
+        with:
+          name: Convertr-Setup-v${{ steps.version.outputs.version }}
+          path: release/Convertr-Setup-v${{ steps.version.outputs.version }}.exe
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        # Only run on tag pushes — manual dispatches just upload the artifact.
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/Convertr-Setup-v${{ steps.version.outputs.version }}.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false

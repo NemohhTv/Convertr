@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-build.txt
+      - name: Import check
+        # Catches missing dependencies and obvious syntax errors before we
+        # spend 5 minutes on a full PyInstaller build.
+        run: |
+          python -c "import sys; sys.path.insert(0, 'src'); import convertr.app"
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm Convertr.spec
+      - name: Verify output exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/Convertr/Convertr.exe")) {
+            throw "Build did not produce Convertr.exe"
+          }

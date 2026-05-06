@@ -1,17 +1,24 @@
 @echo off
+REM Builds dist\Convertr\Convertr.exe using PyInstaller.
+REM Requires that install_python_requirements.bat has been run.
 setlocal
 cd /d "%~dp0"
 
-echo Building Convertr.exe...
-py -m pip install --upgrade pip
-py -m pip install -r requirements.txt
-py -m PyInstaller --noconfirm --clean --onefile --windowed --name Convertr app.py
-
+where pyinstaller >nul 2>nul
 if errorlevel 1 (
-  echo Build failed.
-  pause
-  exit /b 1
+    echo PyInstaller not found. Run install_python_requirements.bat first.
+    exit /b 1
 )
 
-echo Build complete. Check the dist folder for Convertr.exe.
-pause
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+
+pyinstaller --noconfirm Convertr.spec
+if errorlevel 1 (
+    echo Build failed.
+    exit /b 1
+)
+
+echo.
+echo Build complete: dist\Convertr\Convertr.exe
+endlocal
