@@ -13,7 +13,7 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 APP_NAME = "Convertr"
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.2.1"
 REPO_API = "https://api.github.com/repos/NemohhTv/Convertr/releases/latest"
 FFMPEG_ZIP_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 VIDEO_FORMATS = ["mp4", "mkv", "mov", "webm"]
@@ -209,35 +209,21 @@ class Settings(ctk.CTkToplevel):
                 return
             asset = None
             for candidate in release.get("assets", []):
-                if candidate.get("name", "").lower() == "convertr.exe":
+                if candidate.get("name", "").lower().endswith(".exe") and "setup" in candidate.get("name", "").lower():
                     asset = candidate
                     break
             if not asset:
-                raise RuntimeError("Latest release does not include Convertr.exe yet. Create a tagged release first.")
+                raise RuntimeError("Latest release does not include the Convertr installer yet.")
             download_url = asset.get("browser_download_url")
             self.log(f"Latest version found: {latest_tag}")
-            if not getattr(sys, "frozen", False):
-                self.log("Source mode detected. The updater only replaces the packaged EXE.")
-                messagebox.showinfo(APP_NAME, "Update found, but you are running from source. Build or download the latest EXE from GitHub Releases.")
-                return
-            current_exe = Path(sys.executable).resolve()
-            new_exe = current_exe.with_name("Convertr.new.exe")
-            self.log("Downloading new Convertr.exe...")
-            urllib.request.urlretrieve(download_url, new_exe)
-            self.log("Download complete. Preparing restart...")
-            updater = current_exe.with_name("Convertr_Update.bat")
-            updater.write_text(
-                "@echo off\n"
-                "timeout /t 2 /nobreak >nul\n"
-                f"copy /Y \"{new_exe}\" \"{current_exe}\"\n"
-                f"del \"{new_exe}\"\n"
-                f"start \"\" \"{current_exe}\"\n"
-                "del \"%~f0\"\n",
-                encoding="utf-8",
-            )
-            self.log("Convertr will close, update, and reopen.")
-            messagebox.showinfo(APP_NAME, "Convertr will close, update, and reopen automatically.")
-            popen_hidden(["cmd", "/c", str(updater)])
+            installer = app_dir() / asset.get("name", "Convertr-Setup.exe")
+            self.log("Downloading installer...")
+            urllib.request.urlretrieve(download_url, installer)
+            self.log("Starting installer...")
+            if os.name == "nt":
+                popen_hidden([str(installer)])
+            else:
+                messagebox.showinfo(APP_NAME, "Download complete. Open the installer from the app folder.")
             self.master_app.destroy()
             sys.exit(0)
         except Exception as e:
