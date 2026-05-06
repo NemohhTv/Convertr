@@ -6,11 +6,22 @@
 
 Convertr is a modern Windows desktop app for converting video and audio files while keeping the original source details intact whenever possible.
 
-[Download the latest installer](https://github.com/NemohhTv/Convertr/releases/latest)
+[Download the latest release](https://github.com/NemohhTv/Convertr/releases/latest)
 
 </div>
 
 ---
+
+## Downloads
+
+The release page provides two Windows installers:
+
+| Installer | What it does |
+|---|---|
+| `Convertr-Setup-v2.2.1.exe` | Installs the Convertr desktop app |
+| `Convertr-FFmpeg-Setup-v2.2.1.exe` | Installs FFmpeg locally for Convertr |
+
+Install Convertr first. Then either install FFmpeg from inside the app through **Settings**, or download and run the standalone FFmpeg installer from the release page.
 
 ## Why Convertr?
 
@@ -22,6 +33,7 @@ For example, an MKV with compatible H.264 video and AAC audio can be changed to 
 
 - Sleek dark Windows desktop UI
 - Simple installer EXE from GitHub Releases
+- Separate FFmpeg installer EXE from GitHub Releases
 - No command prompt window when running the installed app
 - Batch convert multiple files at once
 - Built-in FFmpeg installer and updater
@@ -58,10 +70,10 @@ Best when you need files that work broadly across players, editors, and devices.
 ## Installation
 
 1. Open the [latest release](https://github.com/NemohhTv/Convertr/releases/latest)
-2. Download `Convertr-Setup-vX.X.X.exe`
+2. Download `Convertr-Setup-v2.2.1.exe`
 3. Run the installer
 4. Open Convertr
-5. Go to **Settings** and click **Install / Update FFmpeg**
+5. Install FFmpeg from **Settings**, or run `Convertr-FFmpeg-Setup-v2.2.1.exe`
 
 FFmpeg installs locally for Convertr. You do not need to set up system PATH.
 
@@ -71,7 +83,7 @@ Inside Convertr:
 
 1. Open **Settings**
 2. Click **Check / Install App Update**
-3. Convertr downloads the newest GitHub Release and restarts automatically
+3. Convertr downloads the newest GitHub Release and starts the installer
 
 ## Build from source
 
@@ -101,10 +113,11 @@ dist\Convertr.exe
 
 ## Release process
 
-GitHub Actions builds the installer and publishes it on the release as:
+GitHub Actions builds both installers and publishes them on the release page:
 
 ```text
-Convertr-Setup-v2.2.0.exe
+Convertr-Setup-v2.2.1.exe
+Convertr-FFmpeg-Setup-v2.2.1.exe
 ```
 
 ---
