@@ -1,7 +1,9 @@
 name: Release Windows Installer
 
 on:
+  workflow_dispatch:
   push:
+    branches: [ main ]
     tags:
       - 'v*'
 
@@ -15,6 +17,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set release version
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $tag = '${{ github.ref_name }}'
+          } else {
+            $tag = 'v2.2.0'
+          }
+          $version = $tag.TrimStart('v')
+          "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          "CONVERTR_VERSION=$version" >> $env:GITHUB_ENV
+          "INSTALLER_NAME=Convertr-Setup-$tag.exe" >> $env:GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,13 +50,13 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
-          $env:CONVERTR_VERSION = $version
           iscc installer/Convertr.iss
-          Rename-Item installer-output/Convertr-Setup.exe Convertr-Setup-${{ github.ref_name }}.exe
+          Rename-Item installer-output/Convertr-Setup.exe installer-output/$env:INSTALLER_NAME
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: installer-output/Convertr-Setup-${{ github.ref_name }}.exe
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Convertr ${{ env.RELEASE_TAG }}
+          files: installer-output/${{ env.INSTALLER_NAME }}
           generate_release_notes: true
