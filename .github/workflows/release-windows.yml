@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    tags:
-      - 'v*'
 
 permissions:
   contents: write
@@ -21,12 +19,8 @@ jobs:
       - name: Set release version
         shell: pwsh
         run: |
-          if ('${{ github.ref_type }}' -eq 'tag') {
-            $tag = '${{ github.ref_name }}'
-          } else {
-            $tag = 'v2.2.0'
-          }
-          $version = $tag.TrimStart('v')
+          $tag = 'v2.2.1'
+          $version = '2.2.1'
           "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
           "CONVERTR_VERSION=$version" >> $env:GITHUB_ENV
           "INSTALLER_NAME=Convertr-Setup-$tag.exe" >> $env:GITHUB_ENV
@@ -53,10 +47,10 @@ jobs:
           iscc installer/Convertr.iss
           Rename-Item installer-output/Convertr-Setup.exe installer-output/$env:INSTALLER_NAME
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Convertr ${{ env.RELEASE_TAG }}
-          files: installer-output/${{ env.INSTALLER_NAME }}
-          generate_release_notes: true
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete $env:RELEASE_TAG --yes --cleanup-tag 2>$null
+          gh release create $env:RELEASE_TAG "installer-output/$env:INSTALLER_NAME" --title "Convertr $env:RELEASE_TAG" --notes "Windows installer for Convertr $env:RELEASE_TAG. Download and run the setup exe to install Convertr."
