@@ -1,57 +1,123 @@
+<div align="center">
+
 # Convertr
 
-Convertr is a sleek Windows desktop app for fast video and audio file conversion while preserving the original source details whenever possible.
+### Fast, clean file conversion for Windows
+
+Convertr is a modern Windows desktop app for converting video and audio files while keeping the original source details intact whenever possible.
+
+[Download the latest installer](https://github.com/NemohhTv/Convertr/releases/latest)
+
+</div>
+
+---
+
+## Why Convertr?
+
+Convertr is built for quick format changes without wrecking quality. When a file can be repackaged instead of re-encoded, Convertr uses **Smart Fast Mode** to remux the file, which is dramatically faster than a full conversion.
+
+For example, an MKV with compatible H.264 video and AAC audio can be changed to MP4 without re-encoding the video.
 
 ## Features
 
-- Modern dark desktop UI
-- No command prompt window when using the built EXE
-- Built-in Settings window with local FFmpeg install and update
-- Batch conversion for multiple files
-- Video outputs: MP4, MKV, MOV, WEBM
-- Audio outputs: M4A, AAC, MP3, WAV, FLAC
-- Smart Fast Mode for near-instant remuxing when codecs are already compatible
-- Maximum Compatibility Mode for safer full conversion when needed
-- Preserves source resolution, aspect ratio, frame rate, and metadata where supported
+- Sleek dark Windows desktop UI
+- Simple installer EXE from GitHub Releases
+- No command prompt window when running the installed app
+- Batch convert multiple files at once
+- Built-in FFmpeg installer and updater
+- Built-in app updater from GitHub Releases
+- Smart Fast Mode for near-instant remuxing when possible
+- Maximum Compatibility Mode for safer conversions
 - Optional custom output folder
+- Preserves source resolution, aspect ratio, frame rate, and metadata where supported
+
+## Supported outputs
+
+| Type | Formats |
+|---|---|
+| Video | MP4, MKV, MOV, WEBM |
+| Audio | M4A, AAC, MP3, WAV, FLAC |
 
 ## Conversion modes
 
 ### Smart Fast
 
-Smart Fast is the default. It tries to avoid re-encoding whenever possible:
+Default mode. Best for speed.
 
-- MP4 with compatible H.264, HEVC, MPEG-4 video gets video stream copy
-- Compatible audio is copied when possible
-- Incompatible audio is converted to AAC while video is copied
-- MKV and MOV use stream copy when possible
-- WEBM uses VP9 and Opus when required
+Smart Fast tries to avoid re-encoding:
+
+- Copies compatible video streams
+- Copies compatible audio streams
+- Converts only the audio when video can stay untouched
+- Uses full conversion only when the source codec requires it
 
 ### Maximum Compatibility
 
-Maximum Compatibility uses safer encoding choices for files that need broader playback support.
+Best when you need files that work broadly across players, editors, and devices. This mode uses safer encoding choices, but it can take longer.
 
-## Run locally
+## Installation
 
-1. Install Python 3.11+
-2. Run `install_python_requirements.bat`
-3. Launch `run_convertr_windows.vbs`
-4. In the app, open **Settings** and click **Install / Update FFmpeg**
+1. Open the [latest release](https://github.com/NemohhTv/Convertr/releases/latest)
+2. Download `Convertr-Setup-vX.X.X.exe`
+3. Run the installer
+4. Open Convertr
+5. Go to **Settings** and click **Install / Update FFmpeg**
 
-## Build EXE
+FFmpeg installs locally for Convertr. You do not need to set up system PATH.
 
-Run:
+## Updating
+
+Inside Convertr:
+
+1. Open **Settings**
+2. Click **Check / Install App Update**
+3. Convertr downloads the newest GitHub Release and restarts automatically
+
+## Build from source
+
+Requirements:
+
+- Windows
+- Python 3.11+
+- Inno Setup, only needed for installer builds
+
+Install dependencies:
+
+```bat
+install_python_requirements.bat
+```
+
+Build the app EXE:
 
 ```bat
 build_windows_exe.bat
 ```
 
-The build will output:
+The app EXE will be created in:
 
 ```text
 dist\Convertr.exe
 ```
 
-## GitHub Actions build
+## Release process
 
-Push to `main` and GitHub Actions will build a Windows EXE artifact named `Convertr-Windows-EXE`.
+Create and push a version tag:
+
+```bash
+git tag v2.2.0
+git push origin v2.2.0
+```
+
+GitHub Actions will build the installer and publish it on the release as:
+
+```text
+Convertr-Setup-v2.2.0.exe
+```
+
+---
+
+<div align="center">
+
+Made for fast, no-fuss media conversion.
+
+</div>
