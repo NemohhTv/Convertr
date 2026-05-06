@@ -7,7 +7,7 @@
 #define MyAppExeName "Convertr.exe"
 
 [Setup]
-AppId={{8C9C6A2E-0F41-4C7B-9E61-CONVERTR001}
+AppId={{8C9C6A2E-0F41-4C7B-9E61-9A2B5F020010}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -16,7 +16,6 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\installer-output
 OutputBaseFilename=Convertr-Setup
-SetupIconFile=
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
